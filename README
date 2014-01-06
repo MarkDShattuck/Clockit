@@ -1,0 +1,39 @@
+ Clockit SparkFun Alarm Clock Kit Software
+ Clockit KIT-10930(https://www.sparkfun.com/products/10930)
+
+ To use:
+ 1) Build Clockit kit.  
+ 2) Add optional 6-pin programming header (https://www.sparkfun.com/products/116)
+ 3) Install drivers for AVR programmer like: (https://www.sparkfun.com/products/9825)
+ 4) Install WinAVR or similar (http://sourceforge.net/projects/winavr/)
+ 5) Check programming chain: avrdude -c usbtiny -p m328p
+ 6) Download these files: https://github.com/MarkDShattuck/ClockitI 
+ 7) Compile and install new software: make program 
+ 
+ Description:
+ A few modification to the firmware code for the Clockit basic Alarm Clock using 
+ 4-digit 7-segment display and ATmega328P micro-controller from SparkFun 
+ Clockit KIT-10930(https://www.sparkfun.com/products/10930)
+	-Functions: Display: time HH:MM, AM/PM, seconds => colon blink, alarm ON/OFF
+              Alarm: SET/ON/OFF/+9M Snooze, BUZZER
+
+ revision history:
+ 03/04/2009 Nathan Seidle <ns> clockit.c 
+            v?? ns  original code Copyright Spark Fun Electronics© 2009
+ 02/24/2011 Jim Lindblom <jl>
+            v11 jl  modified for new common anode 7-segment 4-digit display
+ 12/28/2013 Mark D. Shattuck <mds> 
+            v12 mds Update Makefile for AVRmega328P
+                    Change:
+                    -SIG_OVERFLOW1 => TIMER1_OVF_vect
+                    -SIG_OVERFLOW2 => TIMER2_OVF_vect
+                    Add new description
+                    Fix apostrophe cathode: Should be PC1 not PC2.
+                    Fix clear_display()
+                    -remove amMark/2 (not needed with correct clear_display)
+                    -cleaned up display_number() 
+					Softened turn on buzz.
+ 12/29/2013 v12 mds Changed Timer1 to CTC mode (WGM 12) since setting TCNT1 during 
+                    ISR loses a few clock cycles. Small effect ~10*1/16e6=0.625us
+                    per interrupt ~ 1s / month
+	
