@@ -1,111 +1,112 @@
-// Clockit SparkFun Alarm Clock Kit
-// <clockit.c> Nathan Seidle 03/04/2009
-// 
-// Description:
-// Basic Alarm Clock using 4-digit 7-segment display and ATmega328P micro-controller
-//  -Functions: Display: time HH:MM, AM/PM, seconds => colon blink, alarm ON/OFF
-//              Alarm: SET/ON/OFF/+9M Snooze, BUZZER
+/*
+ Clockit SparkFun Alarm Clock Kit
+ <clockit.c> Nathan Seidle 03/04/2009
+ 
+ Description:
+ Basic Alarm Clock using 4-digit 7-segment display and ATmega328P micro-controller
+  -Functions: Display: time HH:MM, AM/PM, seconds => colon blink, alarm ON/OFF
+              Alarm: SET/ON/OFF/+9M Snooze, BUZZER
 
-// revision history:
-// 03/04/2009 Nathan Seidle <ns> clockit.c 
-//            v?? ns  original code Copyright Spark Fun Electronics© 2009
-// 02/24/2011 Jim Lindblom <jl>
-//            v11 jl  modified for new common anode 7-segment 4-digit display
-// 12/28/2013 Mark D. Shattuck <mds> 
-//            v12 mds Update Makefile for AVRmega328P
-//                    Change:
-//                    -SIG_OVERFLOW1 => TIMER1_OVF_vect
-//                    -SIG_OVERFLOW2 => TIMER2_OVF_vect
-//                    Add new description
-//                    Fix apostrophe cathode: Should be PC1 not PC2.
-//                    Fix clear_display()
-//                    -remove amMark/2 (not needed with correct clear_display)
-//                    -cleaned up display_number() 
-//					  Softened turn on buzz.
-// 12/29/2013 v12 mds Changed Timer1 to CTC mode (WGM 12) since setting TCNT1 during 
-//                    ISR loses a few clock cycles. Small effect ~10*1/16e6=0.625us
-//                    per interrupt ~ 1s / month
+ revision history:
+ 03/04/2009 Nathan Seidle <ns> clockit.c 
+            v?? ns  original code Copyright Spark Fun Electronics© 2009
+ 02/24/2011 Jim Lindblom <jl>
+            v11 jl  modified for new common anode 7-segment 4-digit display
+ 12/28/2013 Mark D. Shattuck <mds> 
+            v12 mds Update Makefile for AVRmega328P
+                    Change:
+                    -SIG_OVERFLOW1 => TIMER1_OVF_vect
+                    -SIG_OVERFLOW2 => TIMER2_OVF_vect
+                    Add new description
+                    Fix apostrophe cathode: Should be PC1 not PC2.
+                    Fix clear_display()
+                    -remove amMark/2 (not needed with correct clear_display)
+                    -cleaned up display_number() 
+					  Softened turn on buzz.
+ 12/29/2013 v12 mds Changed Timer1 to CTC mode (WGM 12) since setting TCNT1 during 
+                    ISR loses a few clock cycles. Small effect ~10*1/16e6=0.625us
+                    per interrupt ~ 1s / month
 	
-// Detailed Description:
-// Basic Alarm Clock using the Atmel 8-bit ATmega328P micro-controller and a common 
-// anode 7-segment 4-digit LED panel.  Hardware is from SparkFun Clockit KIT-10930 
-// (https://www.sparkfun.com/products/10930 ). The timebase is set by an external
-// 16MHz crystal oscillator.  Three push buttons (UP/DOWN/SNOOZE) and one switch 
-// (ALARM ON/OFF) control operations.  Time is indicated in 12-hour format HH:MM 
-// using a dot (apostrophe) to indicate AM/PM.  Seconds are displayed by blinking 
-// the colon.  Alarm set is controlled by the switch and indicated by the decimal 
-// point on digit 4.  A piezo-electric buzzer sounds the alarm and the snooze 
-// button silences the sound for 9 minutes.  A CLOCK SET mode is entered by pressing 
-// and holding both the UP and DOWN buttons.  In CLOCK SET mode the UP and DOWN 
-// buttons advance or decrease the time with accelerating rate as the button is 
-// held.  Pressing SNOOZE ends CLOCK SET mode.  An ALARM SET mode is entered by 
-// pressing and holding the SNOOZE button.  In ALARM SET mode the alarm time is
-// displayed and the UP and DOWN buttons advance or decrease the time with
-// accelerating rate as the button is held.  Pressing SNOOZE ends ALARM SET 
-// mode.        
+ Detailed Description:
+ Basic Alarm Clock using the Atmel 8-bit ATmega328P micro-controller and a common 
+ anode 7-segment 4-digit LED panel.  Hardware is from SparkFun Clockit KIT-10930 
+ (https://www.sparkfun.com/products/10930 ). The timebase is set by an external
+ 16MHz crystal oscillator.  Three push buttons (UP/DOWN/SNOOZE) and one switch 
+ (ALARM ON/OFF) control operations.  Time is indicated in 12-hour format HH:MM 
+ using a dot (apostrophe) to indicate AM/PM.  Seconds are displayed by blinking 
+ the colon.  Alarm set is controlled by the switch and indicated by the decimal 
+ point on digit 4.  A piezo-electric buzzer sounds the alarm and the snooze 
+ button silences the sound for 9 minutes.  A CLOCK SET mode is entered by pressing 
+ and holding both the UP and DOWN buttons.  In CLOCK SET mode the UP and DOWN 
+ buttons advance or decrease the time with accelerating rate as the button is 
+ held.  Pressing SNOOZE ends CLOCK SET mode.  An ALARM SET mode is entered by 
+ pressing and holding the SNOOZE button.  In ALARM SET mode the alarm time is
+ displayed and the UP and DOWN buttons advance or decrease the time with
+ accelerating rate as the button is held.  Pressing SNOOZE ends ALARM SET 
+ mode.        
 
-// Theory of Operation:
-// 1) Three timers are used to generate interrupts to control the clock.
-// -Timer0 is used in normal mode to create us delays.
-// -Timer1 is used to determine the time.  In CTC mode (WGM mode 12) the timer counts
-//  up to ICR1=15625 and generates a capture (TIMER1_CAPT_vect) interrupt.  The clock 
-//  frequency is 16MHz.  The pre-scaler is set 1024, so each count is 1024/16=64us.
-//  Therefore, 1s/64us = 15625 counts each second. Timer1's ISR updates the time 
-//  HH:MM:SS and AM/PM.
-// -Timer2 is used in normal mode to update the display every 256*64us = 16.384ms.
-// 2) A form of pulse-width-modulation PWM is used to drive the display without the 
-// need for limiting resistors.  However, it is possible to burn out the display if 
-// the elements are left on too long.  (See display_time function for more details).
-// 3) The alarm condition and the three buttons are polled using the function 
-// check_alarm and check_button in main.
+ Theory of Operation:
+ 1) Three timers are used to generate interrupts to control the clock.
+ -Timer0 is used in normal mode to create us delays.
+ -Timer1 is used to determine the time.  In CTC mode (WGM mode 12) the timer counts
+  up to ICR1=15625 and generates a capture (TIMER1_CAPT_vect) interrupt.  The clock 
+  frequency is 16MHz.  The pre-scaler is set 1024, so each count is 1024/16=64us.
+  Therefore, 1s/64us = 15625 counts each second. Timer1's ISR updates the time 
+  HH:MM:SS and AM/PM.
+ -Timer2 is used in normal mode to update the display every 256*64us = 16.384ms.
+ 2) A form of pulse-width-modulation PWM is used to drive the display without the 
+ need for limiting resistors.  However, it is possible to burn out the display if 
+ the elements are left on too long.  (See display_time function for more details).
+ 3) The alarm condition and the three buttons are polled using the function 
+ check_alarm and check_button in main.
 
-// Hardware:
-// AVRmega328P with 7-segment 4-digit display [YSD-439AB4B-35]
-//
-//               -----------------------------
-//               |        AVR ATmega328P     |   
-//               |---------------------------|
-//         RESET-| 1  RESET           PC5 28 |-B
-//          DIG1-| 2  PD0             PC4 27 |-G   
-//          DIG2-| 3  PD1             PC3 26 |-A      
-//             D-| 4  PD2             PC2 25 |-C+COL-C
-//         COL-A-| 5  PD3             PC1 24 |-F+APOS-C
-//          DIG3-| 6  PD4             PC0 23 |-E  
-//           VCC-| 7  VCC            AGND 22 |-GND   
-//           GND-| 8  GND            AREF 21 |-VCC   
-//   16.000MHz-1-| 9  XTAL1          AVCC 20 |-VCC    
-//   16.000MHz-2-| 10 XTAL2      [SCK]PB5 19 |-BTN1(UP)        
-//            DP-| 11 PD5       [MISO]PB4 18 |-BTN2(DOWN)         
-//          DIG4-| 12 PD6       [MOSI]PB3 17 |-APOS-A      
-//  (SNOOZE)BTN3-| 13 PD7             PB2 16 |-BUZZ-2   
-//     (ALARM)S1-| 14 PB0             PB1 15 |-BUZZ-1
-//               -----------------------------
-//         
-//
-//               ----------------------
-//               |  4-digit 7-segment |   
-//               |    Common Anode    |   
-//               |--------------------|
-//           PD0-| 1  DIG1       B 16 |-PC5
-//           PD1-| 2  DIG2       G 15 |-PC4
-//           PD2-| 3  D          A 14 |-PC3   
-//           PD3-| 4  COL-A      C 13 |-PC2
-//           PC0-| 5  E      COL-C 12 |-PC2       
-//           PD4-| 6  DIG3       F 11 |-PC1   
-//           PD5-| 7  DP    APOS-A 10 |-PB3      
-//           PD6-| 8  DIG4  APOS-C  9 |-PC1
-//               ----------------------
-//         
-//
-//               ----------------------
-//               | 6-PIN SPI Program  |   
-//               |--------------------|
-//        [MISO]-| 1  MISO      VCC 2 |-VCC
-//         [SCK]-| 3  SCK      MOSI 4 |-[MOSI]
-//         RESET-| 5  RESET     GND 6 |-GND   
-//               ----------------------
+ Hardware:
+ AVRmega328P with 7-segment 4-digit display [YSD-439AB4B-35]
+
+               -----------------------------
+               |        AVR ATmega328P     |   
+               |---------------------------|
+         RESET-| 1  RESET           PC5 28 |-B
+          DIG1-| 2  PD0             PC4 27 |-G   
+          DIG2-| 3  PD1             PC3 26 |-A      
+             D-| 4  PD2             PC2 25 |-C+COL-C
+         COL-A-| 5  PD3             PC1 24 |-F+APOS-C
+          DIG3-| 6  PD4             PC0 23 |-E  
+           VCC-| 7  VCC            AGND 22 |-GND   
+           GND-| 8  GND            AREF 21 |-VCC   
+   16.000MHz-1-| 9  XTAL1          AVCC 20 |-VCC    
+   16.000MHz-2-| 10 XTAL2      [SCK]PB5 19 |-BTN1(UP)        
+            DP-| 11 PD5       [MISO]PB4 18 |-BTN2(DOWN)         
+          DIG4-| 12 PD6       [MOSI]PB3 17 |-APOS-A      
+  (SNOOZE)BTN3-| 13 PD7             PB2 16 |-BUZZ-2   
+     (ALARM)S1-| 14 PB0             PB1 15 |-BUZZ-1
+               -----------------------------
+         
+
+               ----------------------
+               |  4-digit 7-segment |   
+               |    Common Anode    |   
+               |--------------------|
+           PD0-| 1  DIG1       B 16 |-PC5
+           PD1-| 2  DIG2       G 15 |-PC4
+           PD2-| 3  D          A 14 |-PC3   
+           PD3-| 4  COL-A      C 13 |-PC2
+           PC0-| 5  E      COL-C 12 |-PC2       
+           PD4-| 6  DIG3       F 11 |-PC1   
+           PD5-| 7  DP    APOS-A 10 |-PB3      
+           PD6-| 8  DIG4  APOS-C  9 |-PC1
+               ----------------------
+         
+
+               ----------------------
+               | 6-PIN SPI Program  |   
+               |--------------------|
+        [MISO]-| 1  MISO      VCC 2 |-VCC
+         [SCK]-| 3  SCK      MOSI 4 |-[MOSI]
+         RESET-| 5  RESET     GND 6 |-GND   
+               ----------------------
               
-
+*/
 /*  Original Description
 	2-24-11
 	by Jim Lindblom

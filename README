@@ -12,6 +12,7 @@
  
  Functions: 
  Display => time HH:MM, AM/PM, seconds -> colon blink, alarm ON/OFF
+ Time    => SET
  Alarm   => SET/ON/OFF/+9M Snooze, BUZZER
 
  Hardware:
@@ -25,6 +26,24 @@
  5) Check programming chain: avrdude -c usbtiny -p m328p
  6) Download these files: https://github.com/MarkDShattuck/Clockit 
  7) Compile and install new software: make program 
+ 
+ Detailed Description:
+ Basic Alarm Clock using the Atmel 8-bit ATmega328P micro-controller and a common 
+ anode 7-segment 4-digit LED panel.  Hardware is from SparkFun Clockit KIT-10930 
+ (https://www.sparkfun.com/products/10930 ). The timebase is set by an external
+ 16MHz crystal oscillator.  Three push buttons (UP/DOWN/SNOOZE) and one switch 
+ (ALARM ON/OFF) control operations.  Time is indicated in 12-hour format HH:MM 
+ using a dot (apostrophe) to indicate AM/PM.  Seconds are displayed by blinking 
+ the colon.  Alarm set is controlled by the switch and indicated by the decimal 
+ point on digit 4.  A piezo-electric buzzer sounds the alarm and the snooze 
+ button silences the sound for 9 minutes.  A CLOCK SET mode is entered by pressing 
+ and holding both the UP and DOWN buttons.  In CLOCK SET mode the UP and DOWN 
+ buttons advance or decrease the time with accelerating rate as the button is 
+ held.  Pressing SNOOZE ends CLOCK SET mode.  An ALARM SET mode is entered by 
+ pressing and holding the SNOOZE button.  In ALARM SET mode the alarm time is
+ displayed and the UP and DOWN buttons advance or decrease the time with
+ accelerating rate as the button is held.  Pressing SNOOZE ends ALARM SET 
+ mode.        
  
  revision history:
  03/04/2009	Nathan Seidle <ns> clockit.c 
