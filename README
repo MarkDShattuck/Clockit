@@ -23,7 +23,7 @@
  3) Install drivers for AVR programmer like: (https://www.sparkfun.com/products/9825)
  4) Install WinAVR or similar (http://sourceforge.net/projects/winavr/)
  5) Check programming chain: avrdude -c usbtiny -p m328p
- 6) Download these files: https://github.com/MarkDShattuck/ClockitI 
+ 6) Download these files: https://github.com/MarkDShattuck/Clockit 
  7) Compile and install new software: make program 
  
  revision history:
