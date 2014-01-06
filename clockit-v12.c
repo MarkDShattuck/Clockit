@@ -26,6 +26,7 @@
  12/29/2013 v12 mds Changed Timer1 to CTC mode (WGM 12) since setting TCNT1 during 
                     ISR loses a few clock cycles. Small effect ~10*1/16e6=0.625us
                     per interrupt ~ 1s / month
+ 
     
  Detailed Description:
  Basic Alarm Clock using the Atmel 8-bit ATmega328P micro-controller and a common 
@@ -49,10 +50,11 @@
  1) Three timers are used to generate interrupts to control the clock.
  -Timer0 is used in normal mode to create us delays.
  -Timer1 is used to determine the time.  In CTC mode (WGM mode 12) the timer counts
-  up to ICR1=15625 and generates a capture (TIMER1_CAPT_vect) interrupt.  The clock 
-  frequency is 16MHz.  The pre-scaler is set 1024, so each count is 1024/16=64us.
-  Therefore, 1s/64us = 15625 counts each second. Timer1's ISR updates the time 
-  HH:MM:SS and AM/PM.
+  up to ICR1=15624 and generates a capture (TIMER1_CAPT_vect) interrupt  and then 
+  clears the count on the next clk.  Thus the cycle is ICR1+1 clk cycles long.  The 
+  clock frequency is 16MHz.  The pre-scaler is set 1024, so each count is 1024/16=64us.
+  Therefore, 1s/64us = 15625 = ICR1+1 counts each second. Timer1's ISR updates the 
+  time HH:MM:SS and AM/PM.
  -Timer2 is used in normal mode to update the display every 256*64us = 16.384ms.
  2) A form of pulse-width-modulation PWM is used to drive the display without the 
  need for limiting resistors.  However, it is possible to burn out the display if 
@@ -902,7 +904,7 @@ void ioinit(void)
     //<mds> set CTC mode
     TCCR1B |= (1<<WGM12)|(1<<WGM13); // Mode 12 CTC mode
     TIMSK1 = (1<<ICIE1); //Enable overflow interrupts
-    ICR1 = 15625; // SET TOP to 1s
+    ICR1 = 15624; // SET TOP to 1s
     //TCNT1 = 49911; //65536 - 15,625 = 49,911 - Preload timer 1 for 49,911 clicks. Should be 1s per ISR call
     
     //Init Timer2 for updating the display via interrupts
