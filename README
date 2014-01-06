@@ -1,6 +1,22 @@
  Clockit SparkFun Alarm Clock Kit Software
  Clockit KIT-10930(https://www.sparkfun.com/products/10930)
 
+ Description:
+ A few modification to the firmware code for the Sparkfun Clockit Alarm Clock Kit 
+ Clockit KIT-10930(https://www.sparkfun.com/products/10930)
+ 	1) Update Makefile.
+ 	2) Update interrupt names.
+ 	3) New description.
+ 	4) Fix apostrophe/clear_display() code.
+ 	5) Fix TCNT1 changed during interrupt.
+ 
+ Functions: 
+ Display => time HH:MM, AM/PM, seconds -> colon blink, alarm ON/OFF
+ Alarm   => SET/ON/OFF/+9M Snooze, BUZZER
+
+ Hardware:
+ 4-digit 7-segment display and ATmega328P micro-controller 
+ 
  To use:
  1) Build Clockit kit.  
  2) Add optional 6-pin programming header (https://www.sparkfun.com/products/116)
@@ -10,13 +26,6 @@
  6) Download these files: https://github.com/MarkDShattuck/ClockitI 
  7) Compile and install new software: make program 
  
- Description:
- A few modification to the firmware code for the Clockit basic Alarm Clock using 
- 4-digit 7-segment display and ATmega328P micro-controller from SparkFun 
- Clockit KIT-10930(https://www.sparkfun.com/products/10930)
-	-Functions: Display: time HH:MM, AM/PM, seconds => colon blink, alarm ON/OFF
-              Alarm: SET/ON/OFF/+9M Snooze, BUZZER
-
  revision history:
  03/04/2009 Nathan Seidle <ns> clockit.c 
             v?? ns  original code Copyright Spark Fun Electronics© 2009
